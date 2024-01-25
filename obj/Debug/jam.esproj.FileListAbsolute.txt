@@ -1,0 +1,2 @@
+C:\Users\Timothy\source\repos\jam\jam\obj\Debug\jam.esproj.SuggestedBindingRedirects.cache
+C:\Users\Timothy\source\repos\jam\jam\obj\Debug\jam.esproj.CoreCompileInputs.cache
