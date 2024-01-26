@@ -36,6 +36,10 @@ class MainLevel extends Phaser.Scene {
         'b_gin':'Gin',
         'b_rum':'Rum'
     }
+    customer = [];
+    ingredientAmountStatDisplay;
+    ingredientContentStatDisplay = [];
+    ingredientWarningStatDisplay;
 
     preload() {
         this.load.image('dispenser','img/dispenser.png');
@@ -113,6 +117,7 @@ class MainLevel extends Phaser.Scene {
             this.destinationX = pointer.x;
         }, this);
         this.createCustomer('Mojito')
+        this.createDispenserWindow();
 
     }
 
@@ -126,16 +131,56 @@ class MainLevel extends Phaser.Scene {
 
     addIngredient(ingredient)
     {
+        if (this.ingredientWarningStatDisplay !== undefined)
+        {
+            this.ingredientWarningStatDisplay.destroy();
+        }
         if (this.drinkIngredients.length >= 8)
         {
+            this.ingredientWarningStatDisplay = this.add.text(50,10,'Your glass is already full!',{ fontSize: '32px', fill: '#f00' });
+            this.dispenserWindowUI.push(this.ingredientWarningStatDisplay);
             return;
         }
+        else if (this.drinkIngredients.includes(ingredient))
+        {
+            this.ingredientWarningStatDisplay = this.add.text(50,10,'You already have this ingredient in your glass!',{ fontSize: '32px', fill: '#f00' });
+            this.dispenserWindowUI.push(this.ingredientWarningStatDisplay);
+            return;
+        }        
         this.drinkIngredients.push(ingredient);
+        this.drawIngredientStat();
+
+    }
+
+    drawIngredientStat()
+    {
+        if (this.ingredientAmountStatDisplay !== undefined)
+            this.ingredientAmountStatDisplay.destroy();
+        this.ingredientAmountStatDisplay = this.add.text(40,320,`${this.drinkIngredients.length}/8 Ingredients`,{ fontSize: '32px', fill: '#000' });
+        this.dispenserWindowUI.push(this.ingredientAmountStatDisplay);
+        if (this.ingredientContentStatDisplay.length > 0)
+        {
+            for(let i = 0; i < this.ingredientContentStatDisplay.length; i++)
+            {
+                this.ingredientContentStatDisplay[i].destroy();
+            }
+        }
+        for(let i = 0; i < this.drinkIngredients.length; i++)
+        {
+            this.ingredientContentStatDisplay.push(this.add.text(40,320+((i+1)*30),this.drinkIngredients[i],{ fontSize: '32px', fill: '#000' }));
+            this.dispenserWindowUI.push(this.ingredientContentStatDisplay[i]);
+        }
+
     }
 
     clearIngredient()
     {
+        if (this.ingredientWarningStatDisplay !== undefined)
+        {
+            this.ingredientWarningStatDisplay.destroy();
+        }
         this.drinkIngredients = [];
+        this.drawIngredientStat();
     }
 
     createCustomer(drink)
@@ -164,11 +209,9 @@ class MainLevel extends Phaser.Scene {
 
     evaluateDrink(drink)
     {
-        console.log('looking for ',drink);
         let drinkPassRate = 0.75;
         let targetDrink = this.getRecipeByName(drink).recipe;
         let totalIngredient = targetDrink.length;
-        console.log('total ',totalIngredient)
         let matchedIngredient = 0;
         this.drinkIngredients.forEach((e) => {
             if (targetDrink.includes(e))
@@ -234,6 +277,12 @@ class MainLevel extends Phaser.Scene {
         let serveButton = this.physics.add.sprite(910,400,'serve');
         serveButton.setInteractive();
         serveButton.on('pointerdown',(pointer) => {
+            if (this.ingredientAmountStatDisplay !== undefined)
+                this.ingredientAmountStatDisplay.destroy();
+            for (let i = 0; i < this.ingredientContentStatDisplay.length; i++)
+            {
+                this.ingredientContentStatDisplay[i].destroy();
+            }
             this.dispenserWindowUI.forEach((e) => {
                 e.destroy();
             })
@@ -254,10 +303,17 @@ class MainLevel extends Phaser.Scene {
             this.dispenserWindowUI.forEach((e) => {
                 e.destroy();
             })
+            if (this.ingredientAmountStatDisplay !== undefined)
+                this.ingredientAmountStatDisplay.destroy();
+            for (let i = 0; i < this.ingredientContentStatDisplay.length; i++)
+            {
+                this.ingredientContentStatDisplay[i].destroy();
+            }
             pointer.event.stopPropagation();
             this.isInDialogue = false;
         });
         this.dispenserWindowUI.push(cancelButton);
+        this.drawIngredientStat();
     }
 
     createDispenserButton(x,y,image,onClick)
