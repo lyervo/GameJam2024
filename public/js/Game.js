@@ -1,5 +1,8 @@
 import recipe from './recipe.js';
 class MainLevel extends Phaser.Scene {
+    selectAudio;
+    errorAudio;
+    shakeAudio;
 
     player;
     destinationX = 0;
@@ -42,6 +45,11 @@ class MainLevel extends Phaser.Scene {
     ingredientWarningStatDisplay;
 
     preload() {
+        this.load.audio('error', 'audio/error.wav');
+        this.load.audio('select', 'audio/select.wav');
+        this.load.audio('shake','audio/shake.wav');
+        
+
         this.load.image('dispenser','img/dispenser.png');
         this.load.image('table','img/table.png');
         this.load.image('player', 'img/basic.png');
@@ -102,6 +110,10 @@ class MainLevel extends Phaser.Scene {
     }
     
     create() {
+        this.selectAudio = this.sound.add('select');
+        this.errorAudio = this.sound.add('error');
+        this.shakeAudio = this.sound.add('shake');
+        this.createRandomCustomer('Dwarf','Dwarf');
         this.createInteractables('dispenser',100,430, () => {
             console.log('dispenser is clicked');  
             this.createDispenserWindow();
@@ -114,9 +126,11 @@ class MainLevel extends Phaser.Scene {
             {
                 return;
             }
+            // this.targetInteractable = null;
             this.destinationX = pointer.x;
+            pointer.event.stopPropagation();
         }, this);
-        this.createCustomer('Mojito')
+        
         this.createDispenserWindow();
 
     }
@@ -139,14 +153,18 @@ class MainLevel extends Phaser.Scene {
         {
             this.ingredientWarningStatDisplay = this.add.text(50,10,'Your glass is already full!',{ fontSize: '32px', fill: '#f00' });
             this.dispenserWindowUI.push(this.ingredientWarningStatDisplay);
+            this.errorAudio.play();
             return;
         }
         else if (this.drinkIngredients.includes(ingredient))
         {
             this.ingredientWarningStatDisplay = this.add.text(50,10,'You already have this ingredient in your glass!',{ fontSize: '32px', fill: '#f00' });
             this.dispenserWindowUI.push(this.ingredientWarningStatDisplay);
+            this.errorAudio.play();
             return;
         }        
+        console.log('select audio playing')
+        this.selectAudio.play();
         this.drinkIngredients.push(ingredient);
         this.drawIngredientStat();
 
@@ -183,28 +201,89 @@ class MainLevel extends Phaser.Scene {
         this.drawIngredientStat();
     }
 
-    createCustomer(drink)
+    getRandomRecipe()
     {
-        this.createInteractables('dwarf',1000,500,() => {
-            if (this.drinkIngredients.length == 0)
+        const randomIndex = Math.floor(Math.random() * recipe.length);
+        return recipe[randomIndex];
+    }
+
+    createRandomCustomer(customerName,customerSpecies)
+    {
+        let newCustomer = { state: 0, drink:'', satifaction: 0 };
+        let firstRandomRecipe = this.getRandomRecipe();
+        let secondRandomRecipe = this.getRandomRecipe();
+        newCustomer.customer = this.createInteractables('dwarf',1000,500,() => {
+            // state 0 = not ordered yet
+            // state 1 = ordered drink
+            // state 2 = received first drink
+            // state 3 = ordered second drink
+            // state 4 = received second drink
+
+            if (newCustomer.state === 0)
             {
-                this.createDialogueWindow('dwarf','Mojito please');
-                console.log(recipe);
+                
+                newCustomer.drink = firstRandomRecipe.name;
+                this.createDialogueWindow(customerName,'Hi there, can I have a '+firstRandomRecipe.name);
+                newCustomer.state++;
+                return;
             }
-            else
+            else if (newCustomer.state === 1)
             {
-                if (this.evaluateDrink(drink))
+                if (this.drinkIngredients.length === 0)
                 {
-                    this.createDialogueWindow('dwarf','hmmm, tasty');
+                    this.createDialogueWindow(customerName,'Do you have my drink yet? I ordered a '+firstRandomRecipe.name);
+                    return;
+                    
+                }
+                if (this.evaluateDrink(newCustomer.drink))
+                {
+                    newCustomer.drink = secondRandomRecipe.name;
+                    this.createDialogueWindow(customerName,'Hmm tasty... can I have a '+secondRandomRecipe.name+' next?');
+                    newCustomer.state++;
+                    this.drinkIngredients = [];
+                    return;
                 }
                 else
                 {
-                    this.createDialogueWindow('dwarf', 'Excuse me? This is not what I ordered?')
+                    this.createDialogueWindow(customerName,'Excuse me, but I did not ordered this?');
+                    this.drinkIngredients = [];
+                    // leave table
+                    return;
                 }
-                this.clearIngredient();
+                
+            }
+            else if (newCustomer.state === 2)
+            {
+                if (this.drinkIngredients.length === 0)
+                {
+                    this.createDialogueWindow(customerName,'Do you have my drink yet? I ordered a '+secondRandomRecipe);
+                }
+                else
+                {
+                    if (this.evaluateDrink(newCustomer.drink))
+                    {
+                        newCustomer.drink = secondRandomRecipe.name;
+                        this.createDialogueWindow(customerName,'This is a nice drink, thank you!');
+                        newCustomer.state++;
+                        this.drinkIngredients = [];
+                        return;
+                    }
+                    else
+                    {
+                        this.createDialogueWindow(customerName,'Excuse me, but I did not ordered this?');
+                        this.drinkIngredients = [];
+                        // leave table
+                        return;
+                    }
+                }
             }
             
         },1,true);
+
+        console.log(JSON.stringify(newCustomer));
+        this.customer.push(newCustomer);
+
+
     }
 
     evaluateDrink(drink)
@@ -222,7 +301,7 @@ class MainLevel extends Phaser.Scene {
         console.log('matched', matchedIngredient);
         console.log((matchedIngredient/targetDrink.length));
         console.log((matchedIngredient/targetDrink.length) > drinkPassRate);
-        return (matchedIngredient/targetDrink.length) > drinkPassRate;
+        return (matchedIngredient/targetDrink.length) >= drinkPassRate;
 
 
     }
@@ -253,11 +332,9 @@ class MainLevel extends Phaser.Scene {
         let row = 0;
         for (let i = 0;i < this.dispenserIngredients.length; i++)
         {
-            console.log('looping');
             let newButton = this.physics.add.sprite(originX+((count)*(spacingX)),originY+((row+1)*spacingY),this.dispenserIngredients[i]);
             newButton.setInteractive();
             newButton.on('pointerdown', (pointer) => {
-                console.log('clicked '+this.dispenserIngredients[i]);
                 this.addIngredient(this.ingredientNames[this.dispenserIngredients[i]]);
                 pointer.event.stop
             });
@@ -277,6 +354,14 @@ class MainLevel extends Phaser.Scene {
         let serveButton = this.physics.add.sprite(910,400,'serve');
         serveButton.setInteractive();
         serveButton.on('pointerdown',(pointer) => {
+            if (this.drinkIngredients.length === 0)
+            {
+                this.ingredientWarningStatDisplay = this.add.text(50,10,'You cannot serve an empty glass!',{ fontSize: '32px', fill: '#f00' });
+                this.dispenserWindowUI.push(this.ingredientWarningStatDisplay);
+                this.errorAudio.play();
+                return;
+            }
+            this.shakeAudio.play();
             if (this.ingredientAmountStatDisplay !== undefined)
                 this.ingredientAmountStatDisplay.destroy();
             for (let i = 0; i < this.ingredientContentStatDisplay.length; i++)
@@ -346,31 +431,36 @@ class MainLevel extends Phaser.Scene {
             console.log('interactive set')
             newObject.setInteractive();
             newObject.on('pointerdown', (pointer) => {
+                pointer.event.stopPropagation();
                 if (this.isInDialogue)
                 {
                     return;
                 }
                 console.log('interactive clicked');
                 this.destinationX = newObject.x;
+                console.log(' i set the deistination x');
+                console.log(this.destinationX);
                 this.targetInteractable = newObject;
-                pointer.event.stopPropagation();
+                
             });
 
             newObject.onClickResult = onClick;
         }
         this.interactables.push(newObject);
+        return newObject;
     }
 
     update() {
         if (this.player !== undefined) {
             
-            if (this.targetInteractable !== null && Math.abs(this.player.x - this.destinationX) <= this.minInteractionDistance) {
+            if (this.targetInteractable !== null && Math.abs(this.player.x - this.targetInteractable.x) <= this.minInteractionDistance) {
                 this.player.setVelocityX(0);
                 if (this.targetInteractable !== null && this.targetInteractable.onClickResult !== null) {
                     this.targetInteractable.onClickResult();
                     this.targetInteractable = null;
                     this.destinationX = this.player.x;
-                }
+                }    
+                
 
             }
             else if (Math.abs(this.player.x - this.destinationX) <= 3)
