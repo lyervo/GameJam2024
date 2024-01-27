@@ -44,6 +44,21 @@ class MainLevel extends Phaser.Scene {
     ingredientContentStatDisplay = [];
     ingredientWarningStatDisplay;
 
+    customerSeat = [
+        {
+            x:720,
+            taken: false
+        },
+        {
+            x:580,
+            taken: false
+        },
+        {
+            x:440,
+            taken: false
+        }
+    ]
+
     preload() {
         this.load.audio('error', 'audio/error.wav');
         this.load.audio('select', 'audio/select.wav');
@@ -113,9 +128,10 @@ class MainLevel extends Phaser.Scene {
         this.selectAudio = this.sound.add('select');
         this.errorAudio = this.sound.add('error');
         this.shakeAudio = this.sound.add('shake');
-        this.createRandomCustomer('Dwarf','Dwarf');
+        this.createRandomCustomer('Dwarf1','Dwarf',1280);
+        this.createRandomCustomer('Dwarf2','Dwarf',1580);
+        this.createRandomCustomer('Dwarf3','Dwarf',1780);
         this.createInteractables('dispenser',100,430, () => {
-            console.log('dispenser is clicked');  
             this.createDispenserWindow();
         })
         this.add.image(350,550,'table');
@@ -163,7 +179,6 @@ class MainLevel extends Phaser.Scene {
             this.errorAudio.play();
             return;
         }        
-        console.log('select audio playing')
         this.selectAudio.play();
         this.drinkIngredients.push(ingredient);
         this.drawIngredientStat();
@@ -207,19 +222,20 @@ class MainLevel extends Phaser.Scene {
         return recipe[randomIndex];
     }
 
-    createRandomCustomer(customerName,customerSpecies)
+    createRandomCustomer(customerName,customerSpecies,startX = 1100)
     {
-        let newCustomer = { state: 0, drink:'', satifaction: 0 };
+        let newCustomer = { state: 0, drink:'', satifaction: 0, seat: -1 };
         let firstRandomRecipe = this.getRandomRecipe();
         let secondRandomRecipe = this.getRandomRecipe();
-        newCustomer.customer = this.createInteractables('dwarf',1000,500,() => {
-            // state 0 = not ordered yet
-            // state 1 = ordered drink
-            // state 2 = received first drink
-            // state 3 = ordered second drink
-            // state 4 = received second drink
+        newCustomer.customer = this.createInteractables('dwarf',startX,500,() => {
+            // state 0 = walk into scene and take seat 
+            // state 1 = not ordered yet
+            // state 2 = ordered drink
+            // state 3 = received first drink
+            // state 4 = ordered second drink
+            // state 5 = received second drink
 
-            if (newCustomer.state === 0)
+            if (newCustomer.state === 1)
             {
                 
                 newCustomer.drink = firstRandomRecipe.name;
@@ -227,7 +243,7 @@ class MainLevel extends Phaser.Scene {
                 newCustomer.state++;
                 return;
             }
-            else if (newCustomer.state === 1)
+            else if (newCustomer.state === 2)
             {
                 if (this.drinkIngredients.length === 0)
                 {
@@ -247,16 +263,16 @@ class MainLevel extends Phaser.Scene {
                 {
                     this.createDialogueWindow(customerName,'Excuse me, but I did not ordered this?');
                     this.drinkIngredients = [];
-                    // leave table
+                    newCustomer.state = 4;
                     return;
                 }
                 
             }
-            else if (newCustomer.state === 2)
+            else if (newCustomer.state === 3)
             {
                 if (this.drinkIngredients.length === 0)
                 {
-                    this.createDialogueWindow(customerName,'Do you have my drink yet? I ordered a '+secondRandomRecipe);
+                    this.createDialogueWindow(customerName,'Do you have my drink yet? I ordered a '+secondRandomRecipe.name);
                 }
                 else
                 {
@@ -266,13 +282,14 @@ class MainLevel extends Phaser.Scene {
                         this.createDialogueWindow(customerName,'This is a nice drink, thank you!');
                         newCustomer.state++;
                         this.drinkIngredients = [];
+                        newCustomer.state = 4;
                         return;
                     }
                     else
                     {
                         this.createDialogueWindow(customerName,'Excuse me, but I did not ordered this?');
                         this.drinkIngredients = [];
-                        // leave table
+                        newCustomer.state = 4;
                         return;
                     }
                 }
@@ -280,10 +297,9 @@ class MainLevel extends Phaser.Scene {
             
         },1,true);
 
-        console.log(JSON.stringify(newCustomer));
+
         this.customer.push(newCustomer);
-
-
+        console.log(this.customer.length);
     }
 
     evaluateDrink(drink)
@@ -298,9 +314,6 @@ class MainLevel extends Phaser.Scene {
                 matchedIngredient++;
             }
         });
-        console.log('matched', matchedIngredient);
-        console.log((matchedIngredient/targetDrink.length));
-        console.log((matchedIngredient/targetDrink.length) > drinkPassRate);
         return (matchedIngredient/targetDrink.length) >= drinkPassRate;
 
 
@@ -312,7 +325,6 @@ class MainLevel extends Phaser.Scene {
         {
             if (recipe[i].name === name)
             {
-                console.log(recipe[i])
                 return recipe[i];
             }
         }
@@ -428,7 +440,6 @@ class MainLevel extends Phaser.Scene {
         newObject.objName = imageName;
         if (onClick !== null) {
             
-            console.log('interactive set')
             newObject.setInteractive();
             newObject.on('pointerdown', (pointer) => {
                 pointer.event.stopPropagation();
@@ -436,10 +447,7 @@ class MainLevel extends Phaser.Scene {
                 {
                     return;
                 }
-                console.log('interactive clicked');
                 this.destinationX = newObject.x;
-                console.log(' i set the deistination x');
-                console.log(this.destinationX);
                 this.targetInteractable = newObject;
                 
             });
@@ -475,7 +483,52 @@ class MainLevel extends Phaser.Scene {
                 this.player.setFlipX(false);
             }
         }
+
+        if (this.customer.length !== 0)
+        {
+            this.customer.forEach((e) => {
+                if (e.seat === -1)
+                {
+                    for (let i = 0; i < this.customerSeat.length; i++)
+                    {
+                        if (!this.customerSeat[i].taken)
+                        {
+                            console.log('seat '+i);
+                            this.customerSeat[i].taken = true;
+                            e.seat = i;
+                            e.customer.setVelocityX(-200);
+                            break;
+                        }
+                    }
+                }
+                else if (e.state == 0 && Math.abs(e.customer.x - this.customerSeat[e.seat].x) <= 3)
+                {
+                    e.customer.x = this.customerSeat[e.seat].x;
+                    e.customer.setVelocityX(0);
+                    e.state = 1;
+                }
+                else if (e.state == 4)
+                {
+                    e.customer.setFlipX(false);
+                    e.customer.setVelocityX(200);
+                    e.state = 5;
+                }
+                else if (e.state == 5 && e.customer.x >= 1280)
+                {
+                    e.customer.destroy();
+                    console.log('destroyed customer');
+                    e.customer = null;
+                    this.customer = this.customer.filter((e) => e.customer !== null);
+                }
+            })
+        }
+
+
+
+
     }
+
+    
 
 }
 
@@ -496,5 +549,4 @@ const config = {
 };
 
 
-console.log(recipe);
 const game = new Phaser.Game(config);
