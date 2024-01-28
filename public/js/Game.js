@@ -104,6 +104,8 @@ class MainLevel extends Phaser.Scene {
         this.load.image('dispenserWindowBackground','img/dispenserWindowBackground.png');
         this.load.image('recipeWindow','img/recipeWindow.png');
         this.load.image('returnButton','img/buttons/return.png');
+        this.load.image('recipeHighlight','img/recipeHighlighted.png');
+        this.load.image('dispenserHighlight','img/dispenserHighlighted.png');
 
         this.dispenserIngredients = [
             'b_bitters',
@@ -145,11 +147,11 @@ class MainLevel extends Phaser.Scene {
         table.setDepth(this.barTableDepth);
         this.createInteractables('recipe',107,208, () => {
             this.createRecipeWindow();
-        },1,false,this.barTableDepth)
-        this.createInteractables('dispenser',100,430, () => {
+        },1,false,this.barTableDepth, 'recipeHighlight')
+        this.createInteractables('dispenser',25,218, () => {
             this.createDispenserWindow();
-        }, 1,false, this.barTableDepth)
-        this.player = this.physics.add.sprite(0, 375, 'player');
+        }, 1,false, this.barTableDepth,'dispenserHighlight')
+        this.player = this.physics.add.sprite(0, 378, 'player');
         this.player.setDepth(this.playerDepth);
         
         this.input.on('pointerdown', function (pointer) {
@@ -174,6 +176,7 @@ class MainLevel extends Phaser.Scene {
         let returnButton = this.physics.add.sprite(900,600,'returnButton');
         returnButton.setInteractive();
         returnButton.on('pointerdown',(pointer) => {
+            this.selectAudio.play();
             this.dispenserWindowUI.forEach((e) => {
                 e.destroy();
             })
@@ -420,6 +423,7 @@ class MainLevel extends Phaser.Scene {
             })
             pointer.event.stopPropagation();
             this.isInDialogue = false;
+            this.selectAudio.play();
         })
         this.dispenserWindowUI.push(serveButton);
         let clearButton = this.physics.add.sprite(910,540,'clear');
@@ -427,6 +431,7 @@ class MainLevel extends Phaser.Scene {
         clearButton.on('pointerdown', (pointer) => {
             this.clearIngredient();
             pointer.event.stopPropagation();
+            this.selectAudio.play();
         })
         this.dispenserWindowUI.push(clearButton);
         let cancelButton = this.physics.add.sprite(910,600,'cancelDispenserWindow');
@@ -443,6 +448,7 @@ class MainLevel extends Phaser.Scene {
             }
             pointer.event.stopPropagation();
             this.isInDialogue = false;
+            this.selectAudio.play();
         });
         this.dispenserWindowUI.push(cancelButton);
         this.drawIngredientStat();
@@ -473,7 +479,7 @@ class MainLevel extends Phaser.Scene {
         this.dialogueText = this.add.text(10, 470, text, { fontSize: '32px', fill: '#fff' });
     }
 
-    createInteractables(imageName, x, y, onClick = null, scale = 1, flip = false, depth = 1) {
+    createInteractables(imageName, x, y, onClick = null, scale = 1, flip = false, depth = 1,highlight = null) {
         let newObject = this.physics.add.sprite(x, y, imageName);
         newObject.setFlipX(flip);
         newObject.setScale(scale);
@@ -496,6 +502,17 @@ class MainLevel extends Phaser.Scene {
             newObject.onClickResult = onClick;
         }
         this.interactables.push(newObject);
+        if (highlight !== null)
+        {
+            newObject.on('pointerover',() => {
+                newObject.setTexture(highlight)
+            })
+
+            newObject.on('pointerout', () => {
+                newObject.setTexture(imageName)
+            })
+        }
+
         return newObject;
     }
 

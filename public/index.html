@@ -5,7 +5,41 @@
     <script type="module" defer src="/js/Game.js"></script>
 </head>
 <body>
+    <style>
+        body {
+        margin: 0;
+        font-family: 'Arial', sans-serif;
+    }
 
-    
+    .credit-section {
+        background-color: #f4f4f4;
+        padding: 20px;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .credit-section p {
+        margin: 0;
+    }
+
+    .credit-section a {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    .credit-section a:hover {
+        text-decoration: underline;
+    }
+    </style>
+    <div>
+        <div class="credit-section">
+            <p>Art: Tsita | SFX: Daniel | Programming: Timothy | Writing: Dini</p>
+            <p>Disclaimer: This game contains assets from third party source</p>
+        </div>
+    </div>
 </body>
 </html>
