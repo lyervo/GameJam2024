@@ -4,6 +4,11 @@ class MainLevel extends Phaser.Scene {
     errorAudio;
     shakeAudio;
 
+    uiDepth = 4;
+    playerDepth = -1;
+    barTableDepth = -2;
+    npcDepth = -3;
+
     player;
     destinationX = 0;
     interactables = [];
@@ -63,7 +68,8 @@ class MainLevel extends Phaser.Scene {
         this.load.audio('error', 'audio/error.wav');
         this.load.audio('select', 'audio/select.wav');
         this.load.audio('shake','audio/shake.wav');
-        
+
+        this.load.image('background','img/background.png');
 
         this.load.image('dispenser','img/dispenser.png');
         this.load.image('table','img/table.png');
@@ -128,14 +134,17 @@ class MainLevel extends Phaser.Scene {
         this.selectAudio = this.sound.add('select');
         this.errorAudio = this.sound.add('error');
         this.shakeAudio = this.sound.add('shake');
-        this.createRandomCustomer('Dwarf1','Dwarf',1280);
-        this.createRandomCustomer('Dwarf2','Dwarf',1580);
-        this.createRandomCustomer('Dwarf3','Dwarf',1780);
+
+        let bg = this.add.image(540,338.5,'background');
+        bg.setDepth(-5);
+
+        let table = this.add.image(575,450,'table');
+        table.setDepth(this.barTableDepth);
         this.createInteractables('dispenser',100,430, () => {
             this.createDispenserWindow();
-        })
-        this.add.image(350,550,'table');
-        this.player = this.physics.add.sprite(0, 500, 'player');
+        }, 1,false, this.barTableDepth)
+        this.player = this.physics.add.sprite(0, 375, 'player');
+        this.player.setDepth(this.playerDepth);
         
         this.input.on('pointerdown', function (pointer) {
             if (this.isInDialogue)
@@ -146,8 +155,9 @@ class MainLevel extends Phaser.Scene {
             this.destinationX = pointer.x;
             pointer.event.stopPropagation();
         }, this);
-        
-        this.createDispenserWindow();
+        this.createRandomCustomer('Dwarf1','Dwarf',1280);
+        this.createRandomCustomer('Dwarf2','Dwarf',1580);
+        this.createRandomCustomer('Dwarf3','Dwarf',1780);
 
     }
 
@@ -189,7 +199,7 @@ class MainLevel extends Phaser.Scene {
     {
         if (this.ingredientAmountStatDisplay !== undefined)
             this.ingredientAmountStatDisplay.destroy();
-        this.ingredientAmountStatDisplay = this.add.text(40,320,`${this.drinkIngredients.length}/8 Ingredients`,{ fontSize: '32px', fill: '#000' });
+        this.ingredientAmountStatDisplay = this.add.text(60,320,`${this.drinkIngredients.length}/8 Ingredients`,{ fontSize: '32px', fill: '#000' });
         this.dispenserWindowUI.push(this.ingredientAmountStatDisplay);
         if (this.ingredientContentStatDisplay.length > 0)
         {
@@ -200,7 +210,7 @@ class MainLevel extends Phaser.Scene {
         }
         for(let i = 0; i < this.drinkIngredients.length; i++)
         {
-            this.ingredientContentStatDisplay.push(this.add.text(40,320+((i+1)*30),this.drinkIngredients[i],{ fontSize: '32px', fill: '#000' }));
+            this.ingredientContentStatDisplay.push(this.add.text(60,320+((i+1)*30),this.drinkIngredients[i],{ fontSize: '32px', fill: '#000' }));
             this.dispenserWindowUI.push(this.ingredientContentStatDisplay[i]);
         }
 
@@ -227,7 +237,7 @@ class MainLevel extends Phaser.Scene {
         let newCustomer = { state: 0, drink:'', satifaction: 0, seat: -1 };
         let firstRandomRecipe = this.getRandomRecipe();
         let secondRandomRecipe = this.getRandomRecipe();
-        newCustomer.customer = this.createInteractables('dwarf',startX,500,() => {
+        newCustomer.customer = this.createInteractables('dwarf',startX,387,() => {
             // state 0 = walk into scene and take seat 
             // state 1 = not ordered yet
             // state 2 = ordered drink
@@ -295,7 +305,7 @@ class MainLevel extends Phaser.Scene {
                 }
             }
             
-        },1,true);
+        },1,true,this.npcDepth);
 
 
         this.customer.push(newCustomer);
@@ -363,7 +373,7 @@ class MainLevel extends Phaser.Scene {
             
         }
         this.dispenserWindowUI.push(this.add.image(500,500,'dispenserArt'));
-        let serveButton = this.physics.add.sprite(910,400,'serve');
+        let serveButton = this.physics.add.sprite(910,480,'serve');
         serveButton.setInteractive();
         serveButton.on('pointerdown',(pointer) => {
             if (this.drinkIngredients.length === 0)
@@ -387,7 +397,7 @@ class MainLevel extends Phaser.Scene {
             this.isInDialogue = false;
         })
         this.dispenserWindowUI.push(serveButton);
-        let clearButton = this.physics.add.sprite(910,500,'clear');
+        let clearButton = this.physics.add.sprite(910,540,'clear');
         clearButton.setInteractive();
         clearButton.on('pointerdown', (pointer) => {
             this.clearIngredient();
@@ -418,6 +428,13 @@ class MainLevel extends Phaser.Scene {
         let newButton = this.physics.add.sprite(x,y,image);
     }
 
+    closeDialogue()
+    {
+        this.dialogueWindow.destroy();
+        this.dialogueText.destroy();
+        this.isInDialogue = false;
+    }
+
     createDialogueWindow(name,text,potrait = null)
     {
         this.isInDialogue = true;
@@ -426,18 +443,17 @@ class MainLevel extends Phaser.Scene {
         this.interactables.push(this.dialogueWindow);
         this.dialogueWindow.on('pointerdown', (pointer) => {
             pointer.event.stopPropagation();
-            this.dialogueWindow.destroy();
-            this.dialogueText.destroy();
-            this.isInDialogue = false;
+            this.closeDialogue();
         })
         this.dialogueText = this.add.text(10, 470, text, { fontSize: '32px', fill: '#fff' });
     }
 
-    createInteractables(imageName, x, y, onClick = null, scale = 1, flip = false) {
+    createInteractables(imageName, x, y, onClick = null, scale = 1, flip = false, depth = 1) {
         let newObject = this.physics.add.sprite(x, y, imageName);
         newObject.setFlipX(flip);
         newObject.setScale(scale);
         newObject.objName = imageName;
+        newObject.setDepth(depth);
         if (onClick !== null) {
             
             newObject.setInteractive();
@@ -509,9 +525,16 @@ class MainLevel extends Phaser.Scene {
                 }
                 else if (e.state == 4)
                 {
-                    e.customer.setFlipX(false);
-                    e.customer.setVelocityX(200);
-                    e.state = 5;
+                    setTimeout(() => {
+                        e.customer.setFlipX(false);
+                        e.customer.setVelocityX(200);
+                        e.state = 5;
+                        if (this.isInDialogue)
+                        {
+                            this.closeDialogue();
+                        }
+                    }, 3000);
+                    
                 }
                 else if (e.state == 5 && e.customer.x >= 1280)
                 {
