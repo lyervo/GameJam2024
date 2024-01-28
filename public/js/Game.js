@@ -112,6 +112,9 @@ class MainLevel extends Phaser.Scene {
         this.load.image('recipeHighlight','img/recipeHighlighted.png');
         this.load.image('dispenserHighlight','img/dispenserHighlighted.png');
 
+        this.load.spritesheet('cat2','img/cat_2.png',{frameHeight: 250,frameWidth:421});
+
+
         this.dispenserIngredients = [
             'b_bitters',
             'b_antimatter',
@@ -164,6 +167,12 @@ class MainLevel extends Phaser.Scene {
             repeat: -1
         }); 
 
+        this.anims.create({
+            key: 'cat2Anim',
+            frames: this.anims.generateFrameNumbers('cat2', { start: 0, end: 2, first: 0 }),
+            frameRate: 10,
+            repeat: -1
+        }); 
 
         this.player = this.physics.add.sprite(0, 378, 'bartender');
         this.player.setFrame(0);
@@ -180,9 +189,10 @@ class MainLevel extends Phaser.Scene {
             this.destinationX = pointer.x;
             pointer.event.stopPropagation();
         }, this);
-        this.createRandomCustomer('Dwarf1','Dwarf',1280);
-        this.createRandomCustomer('Dwarf2','Dwarf',1580);
-        this.createRandomCustomer('Dwarf3','Dwarf',1780);
+        this.createRandomCustomer('Dwarf1','cat2','cat2Anim',1280);
+        this.createRandomCustomer('Dwarf2','cat2','cat2Anim',1580);
+
+        this.createRandomCustomer('Dwarf3','cat2','cat2Anim',1780);
 
     }
 
@@ -277,12 +287,12 @@ class MainLevel extends Phaser.Scene {
         return recipe[randomIndex];
     }
 
-    createRandomCustomer(customerName,customerSpecies,startX = 1100)
+    createRandomCustomer(customerName,customerSprite,anim,startX = 1100)
     {
         let newCustomer = { state: 0, drink:'', satifaction: 0, seat: -1 };
         let firstRandomRecipe = this.getRandomRecipe();
         let secondRandomRecipe = this.getRandomRecipe();
-        newCustomer.customer = this.createInteractables('dwarf',startX,387,() => {
+        newCustomer.customer = this.createInteractables(customerSprite,startX,405,() => {
             // state 0 = walk into scene and take seat 
             // state 1 = not ordered yet
             // state 2 = ordered drink
@@ -351,10 +361,9 @@ class MainLevel extends Phaser.Scene {
             }
             
         },1,true,this.npcDepth);
-
-
+        newCustomer.anim = anim;
+        newCustomer.customer.play(anim);
         this.customer.push(newCustomer);
-        console.log(this.customer.length);
     }
 
     evaluateDrink(drink)
@@ -497,14 +506,14 @@ class MainLevel extends Phaser.Scene {
     }
 
     createInteractables(imageName, x, y, onClick = null, scale = 1, flip = false, depth = 1,highlight = null) {
-        let newObject = this.physics.add.sprite(x, y, imageName);
+        let newObject = this.physics.add.sprite(x, y, imageName,0);
         newObject.setFlipX(flip);
         newObject.setScale(scale);
         newObject.objName = imageName;
         newObject.setDepth(depth);
         if (onClick !== null) {
             
-            newObject.setInteractive();
+            newObject.setInteractive(this.input.makePixelPerfect());
             newObject.on('pointerdown', (pointer) => {
                 pointer.event.stopPropagation();
                 if (this.isInDialogue)
@@ -585,6 +594,8 @@ class MainLevel extends Phaser.Scene {
                 {
                     e.customer.x = this.customerSeat[e.seat].x;
                     e.customer.setVelocityX(0);
+                    e.customer.stop(e.customer.anim);
+                    e.customer.setFrame(0);
                     e.state = 1;
                 }
                 else if (e.state == 4)
