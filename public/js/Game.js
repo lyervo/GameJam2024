@@ -50,6 +50,8 @@ class MainLevel extends Phaser.Scene {
     ingredientWarningStatDisplay;
     recipeWindow = undefined;
 
+    
+
     customerSeat = [
         {
             x:720,
@@ -69,6 +71,9 @@ class MainLevel extends Phaser.Scene {
         this.load.audio('error', 'audio/error.wav');
         this.load.audio('select', 'audio/select.wav');
         this.load.audio('shake','audio/shake.wav');
+
+
+        this.load.spritesheet('bartender', 'img/bartender.png', { frameWidth: 505, frameHeight: 506 });
 
         this.load.image('background','img/background.png');
         this.load.image('recipe','img/recipe.png');
@@ -151,8 +156,19 @@ class MainLevel extends Phaser.Scene {
         this.createInteractables('dispenser',25,218, () => {
             this.createDispenserWindow();
         }, 1,false, this.barTableDepth,'dispenserHighlight')
-        this.player = this.physics.add.sprite(0, 378, 'player');
+
+        this.anims.create({
+            key: 'bartenderAnim',
+            frames: this.anims.generateFrameNumbers('bartender', { start: 0, end: 2, first: 0 }),
+            frameRate: 10,
+            repeat: -1
+        }); 
+
+
+        this.player = this.physics.add.sprite(0, 378, 'bartender');
+        this.player.setFrame(0);
         this.player.setDepth(this.playerDepth);
+        
         
         this.input.on('pointerdown', function (pointer) {
             if (this.isInDialogue)
@@ -160,6 +176,7 @@ class MainLevel extends Phaser.Scene {
                 return;
             }
             // this.targetInteractable = null;
+            this.player.play('bartenderAnim');
             this.destinationX = pointer.x;
             pointer.event.stopPropagation();
         }, this);
@@ -521,6 +538,9 @@ class MainLevel extends Phaser.Scene {
             
             if (this.targetInteractable !== null && Math.abs(this.player.x - this.targetInteractable.x) <= this.minInteractionDistance) {
                 this.player.setVelocityX(0);
+                
+                this.player.stop('bartenderAnim');
+                this.player.setFrame(0);
                 if (this.targetInteractable !== null && this.targetInteractable.onClickResult !== null) {
                     this.targetInteractable.onClickResult();
                     this.targetInteractable = null;
@@ -532,6 +552,8 @@ class MainLevel extends Phaser.Scene {
             else if (Math.abs(this.player.x - this.destinationX) <= 3)
             {
                 this.player.setVelocityX(0);
+                this.player.stop('bartenderAnim');
+                this.player.setFrame(0);
             } else if (this.player.x > this.destinationX) {
                 this.player.setVelocityX(-400);
                 this.player.setFlipX(true);
