@@ -48,6 +48,7 @@ class MainLevel extends Phaser.Scene {
     ingredientAmountStatDisplay;
     ingredientContentStatDisplay = [];
     ingredientWarningStatDisplay;
+    recipeWindow = undefined;
 
     customerSeat = [
         {
@@ -70,7 +71,7 @@ class MainLevel extends Phaser.Scene {
         this.load.audio('shake','audio/shake.wav');
 
         this.load.image('background','img/background.png');
-
+        this.load.image('recipe','img/recipe.png');
         this.load.image('dispenser','img/dispenser.png');
         this.load.image('table','img/table.png');
         this.load.image('player', 'img/basic.png');
@@ -101,6 +102,8 @@ class MainLevel extends Phaser.Scene {
         this.load.image('clear','img/buttons/b_clear_all.png');
         this.load.image('serve','img/buttons/b_serve.png');
         this.load.image('dispenserWindowBackground','img/dispenserWindowBackground.png');
+        this.load.image('recipeWindow','img/recipeWindow.png');
+        this.load.image('returnButton','img/buttons/return.png');
 
         this.dispenserIngredients = [
             'b_bitters',
@@ -140,6 +143,9 @@ class MainLevel extends Phaser.Scene {
 
         let table = this.add.image(575,450,'table');
         table.setDepth(this.barTableDepth);
+        this.createInteractables('recipe',107,208, () => {
+            this.createRecipeWindow();
+        },1,false,this.barTableDepth)
         this.createInteractables('dispenser',100,430, () => {
             this.createDispenserWindow();
         }, 1,false, this.barTableDepth)
@@ -160,6 +166,25 @@ class MainLevel extends Phaser.Scene {
         this.createRandomCustomer('Dwarf3','Dwarf',1780);
 
     }
+
+    createRecipeWindow()
+    {
+        this.isInDialogue = true;
+        let recipeWindow = this.add.image(540,338.5,'recipeWindow');
+        let returnButton = this.physics.add.sprite(900,600,'returnButton');
+        returnButton.setInteractive();
+        returnButton.on('pointerdown',(pointer) => {
+            this.dispenserWindowUI.forEach((e) => {
+                e.destroy();
+            })
+            pointer.event.stopPropagation();
+            this.isInDialogue = false;
+        });
+        this.dispenserWindowUI.push(recipeWindow);
+        this.dispenserWindowUI.push(returnButton);
+
+    }
+
 
     destroyByName(name) {
         this.interactables.forEach((e) => {
