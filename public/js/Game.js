@@ -71,6 +71,7 @@ class MainLevel extends Phaser.Scene {
         this.load.audio('error', 'audio/error.wav');
         this.load.audio('select', 'audio/select.wav');
         this.load.audio('shake','audio/shake.wav');
+        this.load.audio('bgm', 'audio/bgm.wav');
 
 
         this.load.spritesheet('bartender', 'img/bartender.png', { frameWidth: 505, frameHeight: 506 });
@@ -147,6 +148,8 @@ class MainLevel extends Phaser.Scene {
         this.selectAudio = this.sound.add('select');
         this.errorAudio = this.sound.add('error');
         this.shakeAudio = this.sound.add('shake');
+        let bgm = this.sound.add('bgm',{ loop: true });
+        bgm.play()
 
         let bg = this.add.image(540,338.5,'background');
         bg.setDepth(-5);
